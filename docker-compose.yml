@@ -1,0 +1,24 @@
+# Replay the campaign:
+#   docker compose up --build --abort-on-container-exit
+# Run only the API (profile "api"):
+#   docker compose --profile api up --build api
+services:
+  campaign:
+    build: .
+    # The default Compose bridge in some Docker setups drops outbound HTTPS.
+    # The daemon bridge is the one `docker build` uses, and it can reach Maven Central.
+    network_mode: bridge
+    environment:
+      HSM_TOKEN_LABEL: kms-token
+    volumes:
+      - ./reports:/app/reports
+      - ./site:/app/site
+    command: ["campaign"]
+  api:
+    profiles: ["api"]
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      HSM_TOKEN_LABEL: kms-token
+    command: ["api"]

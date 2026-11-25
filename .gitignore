@@ -1,0 +1,13 @@
+target/
+native/build/
+.softhsm/
+site/
+reports/history/*.json
+reports/*.html
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+*.log
+.DS_Store

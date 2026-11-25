@@ -1,0 +1,8 @@
+.git
+.softhsm
+**/target
+native/build
+reports/history
+site
+*.log
+.idea

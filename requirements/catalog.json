@@ -1,0 +1,284 @@
+{
+  "requirements": [
+    {
+      "id": "REQ-HSM-001",
+      "level": "functional",
+      "layer": "junit",
+      "inScope": true,
+      "title": "Health identifies the SoftHSM token",
+      "statement": "Unauthenticated GET /api/v1/health returns 200 with status UP, the lab token label, and a manufacturer string that identifies SoftHSM."
+    },
+    {
+      "id": "REQ-SEC-001",
+      "level": "security",
+      "layer": "junit",
+      "inScope": true,
+      "title": "Lab API key gates key and crypto calls",
+      "statement": "A key or crypto call without the lab API key, or with the wrong key, is rejected with 401. The response does not echo the supplied key. Health stays open."
+    },
+    {
+      "id": "REQ-KEY-001",
+      "level": "functional",
+      "layer": "junit",
+      "inScope": true,
+      "title": "AES-256 key is created inside the token",
+      "statement": "The API creates an AES-256 key as a token object, marked sensitive. The token refuses CKA_VALUE. The HTTP body is metadata only."
+    },
+    {
+      "id": "REQ-KEY-002",
+      "level": "functional",
+      "layer": "junit",
+      "inScope": true,
+      "title": "RSA-2048 key pair is created inside the token",
+      "statement": "The API creates an RSA-2048 key pair on the token. The private key is sensitive. Reading CKA_PRIVATE_EXPONENT returns CKR_ATTRIBUTE_SENSITIVE."
+    },
+    {
+      "id": "REQ-KEY-003",
+      "level": "functional",
+      "layer": "junit",
+      "inScope": true,
+      "title": "EC P-256 key pair is created inside the token",
+      "statement": "The API creates a secp256r1 key pair on the token and reports that curve in the metadata."
+    },
+    {
+      "id": "REQ-KEY-004",
+      "level": "functional",
+      "layer": "junit",
+      "inScope": true,
+      "title": "Listing returns metadata only",
+      "statement": "GET /api/v1/keys returns alias, algorithm, size, usage and sensitivity, and does not return key material."
+    },
+    {
+      "id": "REQ-KEY-005",
+      "level": "functional",
+      "layer": "junit",
+      "inScope": true,
+      "title": "Lookup by alias",
+      "statement": "GET /api/v1/keys/{alias} returns the metadata of a key that exists on the token."
+    },
+    {
+      "id": "REQ-KEY-006",
+      "level": "functional",
+      "layer": "junit",
+      "inScope": true,
+      "title": "Delete removes the token object",
+      "statement": "DELETE /api/v1/keys/{alias} removes the object. A later lookup returns 404."
+    },
+    {
+      "id": "REQ-ENC-001",
+      "level": "functional",
+      "layer": "junit",
+      "inScope": true,
+      "title": "AES-CBC-PAD encrypt and decrypt",
+      "statement": "Ciphertext produced with a token AES key decrypts to the same plaintext. The IV is returned to the caller."
+    },
+    {
+      "id": "REQ-WRAP-001",
+      "level": "functional",
+      "layer": "junit",
+      "inScope": true,
+      "title": "AES key wrap round trip",
+      "statement": "An extractable AES key wrapped with CKM_AES_KEY_WRAP can be unwrapped under a new alias after the original is destroyed, and the restored key decrypts ciphertext from the original."
+    },
+    {
+      "id": "REQ-WRAP-002",
+      "level": "negative",
+      "layer": "junit",
+      "inScope": true,
+      "title": "A non-extractable key cannot be wrapped",
+      "statement": "Wrapping a key with CKA_EXTRACTABLE=false is rejected by the token. The API returns 400 and names the CKR."
+    },
+    {
+      "id": "REQ-WRAP-003",
+      "level": "functional",
+      "layer": "junit",
+      "inScope": true,
+      "title": "RSA-PKCS wrap of an AES key",
+      "statement": "An extractable AES key can be wrapped with an RSA public key under CKM_RSA_PKCS and unwrapped with the matching private key, then used to decrypt."
+    },
+    {
+      "id": "REQ-SIG-001",
+      "level": "functional",
+      "layer": "junit",
+      "inScope": true,
+      "title": "RSA SHA-256 sign and verify",
+      "statement": "A signature from the RSA private key (CKM_SHA256_RSA_PKCS) verifies with the matching public key."
+    },
+    {
+      "id": "REQ-SIG-002",
+      "level": "functional",
+      "layer": "junit",
+      "inScope": true,
+      "title": "ECDSA SHA-256 sign and verify",
+      "statement": "A signature from the P-256 private key verifies with the matching public key. SoftHSM exposes CKM_ECDSA, so the service hashes with SHA-256 and the token signs the digest. The signature is raw R||S."
+    },
+    {
+      "id": "REQ-SIG-003",
+      "level": "negative",
+      "layer": "junit",
+      "inScope": true,
+      "title": "A tampered signature is rejected",
+      "statement": "Flipping one byte of a valid signature makes verify report valid=false."
+    },
+    {
+      "id": "REQ-SIG-004",
+      "level": "negative",
+      "layer": "junit",
+      "inScope": true,
+      "title": "Verification with the wrong key is rejected",
+      "statement": "A signature from key A does not verify with key B of the same algorithm."
+    },
+    {
+      "id": "REQ-NEG-001",
+      "level": "negative",
+      "layer": "junit",
+      "inScope": true,
+      "title": "Unknown alias",
+      "statement": "Lookup of an alias that is not on the token returns 404 KEY_NOT_FOUND."
+    },
+    {
+      "id": "REQ-NEG-002",
+      "level": "negative",
+      "layer": "junit",
+      "inScope": true,
+      "title": "Mechanism does not match the key",
+      "statement": "The API returns 400 MECHANISM_MISMATCH when an RSA signature mechanism is asked of an AES key. The token itself also refuses that operation."
+    },
+    {
+      "id": "REQ-NEG-003",
+      "level": "negative",
+      "layer": "junit",
+      "inScope": true,
+      "title": "Wrong user PIN is rejected",
+      "statement": "A user login with the wrong PIN returns CKR_PIN_INCORRECT. The lab session is restored afterwards and can still create a key."
+    },
+    {
+      "id": "REQ-NEG-004",
+      "level": "negative",
+      "layer": "junit",
+      "inScope": true,
+      "title": "Sign with a missing key",
+      "statement": "Sign with an unknown alias returns 404 KEY_NOT_FOUND."
+    },
+    {
+      "id": "REQ-NEG-005",
+      "level": "negative",
+      "layer": "junit",
+      "inScope": true,
+      "title": "Duplicate alias",
+      "statement": "Creating a second key with an existing alias returns 409 DUPLICATE_ALIAS and leaves the original key in place."
+    },
+    {
+      "id": "REQ-NFR-001",
+      "level": "non-functional",
+      "layer": "junit",
+      "inScope": true,
+      "title": "AES key generation stays inside the lab budget",
+      "statement": "Mean latency of five AES-256 generations stays under 2000 ms. This is a smoke budget, not a load test."
+    },
+    {
+      "id": "REQ-NFR-002",
+      "level": "non-functional",
+      "layer": "junit",
+      "inScope": true,
+      "title": "RSA sign stays inside the lab budget",
+      "statement": "Mean latency of five SHA-256 RSA signatures stays under 2000 ms. This is a smoke budget, not a load test."
+    },
+    {
+      "id": "REQ-LOG-001",
+      "level": "negative",
+      "layer": "junit",
+      "inScope": true,
+      "title": "Application logs do not contain secrets",
+      "statement": "After a wrong-PIN probe and an authenticated call, the log contains the CKR name and the request trace id, and does not contain the user PIN, the SO PIN, the lab API key, or the rejected PIN."
+    },
+    {
+      "id": "REQ-C-001",
+      "level": "native",
+      "layer": "native",
+      "inScope": true,
+      "title": "C campaign opens the token",
+      "statement": "A C program linked to SoftHSM opens a read-write session on the lab token and logs in with the user PIN."
+    },
+    {
+      "id": "REQ-C-002",
+      "level": "native",
+      "layer": "native",
+      "inScope": true,
+      "title": "C campaign generates a sensitive AES key",
+      "statement": "C_GenerateKey creates an AES-256 token key. C_GetAttributeValue of CKA_VALUE returns CKR_ATTRIBUTE_SENSITIVE."
+    },
+    {
+      "id": "REQ-C-003",
+      "level": "native",
+      "layer": "native",
+      "inScope": true,
+      "title": "C campaign AES-CBC round trip",
+      "statement": "The C program encrypts and decrypts a payload with CKM_AES_CBC_PAD under the generated key."
+    },
+    {
+      "id": "REQ-C-004",
+      "level": "native",
+      "layer": "native",
+      "inScope": true,
+      "title": "C campaign wrong PIN",
+      "statement": "C_Login with a wrong user PIN, before any successful login in that process, returns CKR_PIN_INCORRECT."
+    },
+    {
+      "id": "REQ-C-005",
+      "level": "native",
+      "layer": "native",
+      "inScope": true,
+      "title": "C campaign destroys the key",
+      "statement": "C_DestroyObject removes the campaign key. A search by label finds nothing."
+    },
+    {
+      "id": "REQ-TRC-001",
+      "level": "traceability",
+      "layer": "junit",
+      "inScope": true,
+      "title": "Every in-scope Java requirement has one test",
+      "statement": "Each in-scope requirement with layer junit has exactly one @Requirement test method. Every annotated id exists in this catalog and in REQUIREMENTS.md."
+    },
+    {
+      "id": "REQ-RPT-001",
+      "level": "report",
+      "layer": "junit",
+      "inScope": true,
+      "title": "The HTML report flags a regression",
+      "statement": "Given a previous all-pass campaign and a current failure, the report marks the campaign failed and names the requirement that regressed."
+    },
+    {
+      "id": "REQ-OOS-001",
+      "level": "out-of-scope",
+      "layer": "none",
+      "inScope": false,
+      "title": "Certified boundary",
+      "statement": "FIPS 140-3 and Common Criteria boundary tests are out of scope. SoftHSM2 is not a certified module."
+    },
+    {
+      "id": "REQ-OOS-002",
+      "level": "out-of-scope",
+      "layer": "none",
+      "inScope": false,
+      "title": "Vendor-specific HSM behaviour",
+      "statement": "Thales ProtectServer mechanisms, secure messaging and vendor attributes are out of scope. This bench does not claim that knowledge."
+    },
+    {
+      "id": "REQ-OOS-003",
+      "level": "out-of-scope",
+      "layer": "none",
+      "inScope": false,
+      "title": "High availability",
+      "statement": "Multi-token failover and HSM clustering are out of scope."
+    },
+    {
+      "id": "REQ-OOS-004",
+      "level": "out-of-scope",
+      "layer": "none",
+      "inScope": false,
+      "title": "Production access control",
+      "statement": "mTLS, partition ACLs and an identity provider are out of scope. The lab API key is only a campaign control."
+    }
+  ]
+}
