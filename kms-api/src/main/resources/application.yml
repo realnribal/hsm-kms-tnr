@@ -1,0 +1,25 @@
+server:
+  port: ${PORT:8080}
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+
+spring:
+  main:
+    banner-mode: "off"
+  jackson:
+    default-property-inclusion: non_null
+
+hsm:
+  library: ${HSM_LIBRARY:/usr/lib/softhsm/libsofthsm2.so}
+  token-label: ${HSM_TOKEN_LABEL:kms-token}
+  user-pin: ${HSM_PIN:tnr-user-pin-7f3a}
+
+kms:
+  api-key: ${KMS_API_KEY:lab-api-key-7f3a}
+
+logging:
+  level:
+    root: INFO
+    io.github.realnribal.hsmkms: INFO

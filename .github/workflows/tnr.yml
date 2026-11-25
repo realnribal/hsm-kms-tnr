@@ -1,0 +1,99 @@
+name: TNR campaign
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tnr-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  campaign:
+    name: Build and run campaign
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+          cache-dependency-path: kms-api/pom.xml
+
+      - name: Install SoftHSM2 and a C toolchain
+        run: sudo apt-get update && sudo apt-get install -y softhsm2 gcc cmake make
+
+      - name: Restore campaign history
+        uses: actions/cache/restore@v4
+        with:
+          path: reports/history
+          key: tnr-history-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: tnr-history-
+
+      - name: Run the TNR campaign
+        run: ./scripts/run-campaign.sh
+
+      - name: Upload the HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tnr-report
+          path: site/
+          if-no-files-found: error
+
+      - name: Save campaign history
+        if: always()
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: reports/history
+          key: tnr-history-${{ github.run_id }}-${{ github.run_attempt }}
+
+  pages:
+    name: Publish report to GitHub Pages
+    needs: campaign
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Download the report
+        uses: actions/download-artifact@v4
+        with:
+          name: tnr-report
+          path: downloaded
+
+      - name: Place index.html at the site root
+        run: |
+          set -euo pipefail
+          mkdir -p site
+          found="$(find downloaded -name index.html -print -quit)"
+          test -n "$found"
+          cp "$found" site/index.html
+          test -f site/index.html
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
