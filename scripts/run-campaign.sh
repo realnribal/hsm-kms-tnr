@@ -33,15 +33,28 @@ if [[ $CMAKE_RC -eq 0 ]]; then
 fi
 set -e
 
+# Maven Central answers 429 when two runners resolve the same parent POM at once.
+mvn_retry() {
+  local attempt
+  for attempt in 1 2 3; do
+    if "$@"; then
+      return 0
+    fi
+    echo "mvn failed (attempt ${attempt}), waiting $((attempt * 20))s"
+    sleep $((attempt * 20))
+  done
+  return 1
+}
+
 echo "== Java TNR campaign =="
 set +e
-(cd "$ROOT/kms-api" && mvn -B test)
+(cd "$ROOT/kms-api" && mvn_retry mvn -B test)
 MVN_RC=$?
 set -e
 
 echo "== HTML report =="
 set +e
-(cd "$ROOT/kms-api" && mvn -B -DskipTests compile exec:java \
+(cd "$ROOT/kms-api" && mvn_retry mvn -B -DskipTests compile exec:java \
   -Dexec.classpathScope=compile \
   -Dexec.mainClass=io.github.realnribal.hsmkms.tools.TnrReportGenerator \
   -Dexec.args="$ROOT")
